@@ -1,3 +1,4 @@
+import 'package:ecommerce/presentation/state_holders/email_verification_controller.dart';
 import 'package:ecommerce/presentation/state_holders/otp_verification_controller.dart';
 import 'package:ecommerce/presentation/ui/screens/main_bottom_nav_screen.dart';
 import 'package:ecommerce/presentation/ui/utility/app_colors.dart';
@@ -6,17 +7,46 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
+import 'dart:async';
 
 class OTPVerificationScreen extends StatefulWidget {
   final String email;
-  const OTPVerificationScreen({Key? key, required this.email}) : super(key: key);
+
+  const OTPVerificationScreen({Key? key, required this.email})
+      : super(key: key);
 
   @override
   State<OTPVerificationScreen> createState() => _OTPVerificationScreenState();
 }
 
 class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
+
   final TextEditingController _otpTEController = TextEditingController();
+  late Timer _timer;
+  int _secondsRemaining = 120;
+
+  @override
+  void initState() {
+    super.initState();
+    startTimer();
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  void startTimer() {
+    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
+      if (_secondsRemaining > 0) {
+        setState(() {
+          _secondsRemaining--;
+        });
+      } else
+        (_timer.cancel());
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -64,16 +94,16 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   keyboardType: TextInputType.number,
                   pinTheme: PinTheme(
-                      shape: PinCodeFieldShape.box,
-                      borderRadius: BorderRadius.circular(5),
-                      fieldHeight: 50,
-                      fieldWidth: 50,
-                      activeFillColor: Colors.white,
-                      inactiveFillColor: Colors.white,
-                      selectedFillColor: Colors.white,
-                      activeColor: AppColors.primaryColor,
-                      inactiveColor: AppColors.primaryColor,
-                      selectedColor: Colors.green,
+                    shape: PinCodeFieldShape.box,
+                    borderRadius: BorderRadius.circular(5),
+                    fieldHeight: 50,
+                    fieldWidth: 50,
+                    activeFillColor: Colors.white,
+                    inactiveFillColor: Colors.white,
+                    selectedFillColor: Colors.white,
+                    activeColor: AppColors.primaryColor,
+                    inactiveColor: AppColors.primaryColor,
+                    selectedColor: Colors.green,
                   ),
                   animationDuration: const Duration(milliseconds: 300),
                   enableActiveFill: true,
@@ -91,43 +121,56 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                   width: double.infinity,
                   child: GetBuilder<OtpVerificationController>(
                       builder: (controller) {
-                        if (controller.otpVerificationInProgress) {
-                          return const Center(
-                            child: CircularProgressIndicator(),
-                          );
-                        }
-                        return ElevatedButton(
-                          onPressed: () {
-                            verifyOtp(controller);
-                          },
-                          child: const Text('Next'),
-                        );
-                      }
-                  ),
+                    if (controller.otpVerificationInProgress) {
+                      return const Center(
+                        child: CircularProgressIndicator(),
+                      );
+                    }
+                    return ElevatedButton(
+                      onPressed: () {
+                        verifyOtp(controller);
+                      },
+                      child: const Text('Next'),
+                    );
+                  }),
                 ),
-
                 const SizedBox(
                   height: 24,
                 ),
                 RichText(
-                  text: const TextSpan(
+                  text: TextSpan(
                     style: TextStyle(color: Colors.grey),
                     children: [
                       TextSpan(text: 'This code will expire in '),
                       TextSpan(
-                          text: '120s',
-                          style: TextStyle(
-                              color: AppColors.primaryColor,
-                              fontWeight: FontWeight.bold,
-                          ),
+                        text: '$_secondsRemaining s',
+                        style: TextStyle(
+                          color: AppColors.primaryColor,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
                 ),
-                 TextButton(
-                      onPressed: () {},
-                      style: TextButton.styleFrom(foregroundColor: Colors.grey),
-                      child: const Text('Resend'),
+                TextButton(
+                  onPressed: _secondsRemaining > 0
+                      ? null
+                      : () {
+                          // Add logic to resend OTP here
+                          // For example, you can call a function to resend OTP
+                          resendOtp();
+                          // Restart the timer
+                          setState(() {
+                            _secondsRemaining = 120;
+                          });
+                          startTimer();
+                        },
+                  style: TextButton.styleFrom(
+                    foregroundColor: _secondsRemaining > 0
+                        ? Colors.grey
+                        : AppColors.primaryColor,
+                  ),
+                  child: const Text('Resend'),
                 ),
               ],
             ),
@@ -139,7 +182,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
 
   Future<void> verifyOtp(OtpVerificationController controller) async {
     final response =
-    await controller.verifyOtp(widget.email, _otpTEController.text.trim());
+        await controller.verifyOtp(widget.email, _otpTEController.text.trim());
     if (response) {
       Get.offAll(() => const MainBottomNavScreen());
     } else {
@@ -150,6 +193,24 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
           ),
         );
       }
+    }
+  }
+
+  Future<void> resendOtp() async {
+    EmailVerificationController emailController = EmailVerificationController();
+    bool verificationSuccess = await emailController.verifyEmail(widget.email);
+
+    // Check if the verification was successful
+    if (verificationSuccess) {
+      // Reset the countdown to 120 seconds
+      _secondsRemaining = 120;
+      startTimer();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to resend verification code. Try again.'),
+        ),
+      );
     }
   }
 }

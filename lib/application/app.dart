@@ -2,14 +2,11 @@ import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:ecommerce/application/state_holder_binder.dart';
-import 'package:ecommerce/presentation/state_holders/theme_mode_controller.dart';
 import 'package:ecommerce/presentation/ui/screens/splash_screen.dart';
 import 'package:ecommerce/presentation/ui/utility/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-// final ThemeModeController themeModeController = ThemeModeController();
-// hello world
 
 class CraftyBay extends StatefulWidget {
   static GlobalKey<NavigatorState> globalKey = GlobalKey<NavigatorState>();

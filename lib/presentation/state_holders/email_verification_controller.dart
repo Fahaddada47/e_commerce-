@@ -25,4 +25,19 @@ class EmailVerificationController extends GetxController {
       return false;
     }
   }
+
+  Future<void> resendEmailVerification(String email) async {
+    final NetworkResponse response = await NetworkCaller.getRequest(Urls.verifyEmail(email));
+
+    if (response.isSuccess) {
+      _message = response.responseJson?['data'] ?? '';
+      // Optionally, you can show a success message here
+      update();
+    } else {
+      _message = 'Failed to resend email verification! Try again';
+      // Optionally, you can show an error message here
+      update();
+    }
+  }
 }
+
